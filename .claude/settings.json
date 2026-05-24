@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /tmp/figma_screens)",
+      "Bash(curl -sL \"https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/d54059d1-1b0d-4e91-86a7-466e139777e6\" -o /tmp/figma_screens/home.png)",
+      "Bash(curl -sL \"https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/c34ee63e-ebc2-40b7-ae3c-09a94e27fc80\" -o /tmp/figma_screens/artist.png)",
+      "Bash(curl -sL \"https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/9e65449a-5419-42e4-a213-f4b86a98cda3\" -o /tmp/figma_screens/about.png)",
+      "Bash(curl -sL \"https://figma-alpha-api.s3.us-west-2.amazonaws.com/images/cc7dcb4c-b2ca-4afe-80b7-1c4db592629e\" -o /tmp/figma_screens/artwork.png)",
+      "Read(//tmp/figma_screens/**)",
+      "Read(//private/tmp/figma_screens/**)",
+      "Bash(node_modules/.bin/next build *)"
+    ]
+  }
+}
