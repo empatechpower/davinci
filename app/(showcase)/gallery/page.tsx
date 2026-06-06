@@ -2,245 +2,267 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, useMemo } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
-import { ARTWORKS, ARTISTS } from "@/lib/mock-data";
+import { useState, useEffect } from "react";
+import { Instagram, Loader2, ArrowUp } from "lucide-react";
 
-const CATEGORIES = ["All", "Watercolor", "Digital Art", "Mixed Media", "Sculpture", "Acrylic", "Ink Drawing"];
+interface InstagramPost {
+  id: string;
+  caption?: string;
+  media_type: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
+  media_url: string;
+  thumbnail_url?: string;
+  permalink: string;
+  timestamp: string;
+}
 
-const SORT_OPTIONS = [
-  { label: "Newest First", value: "newest" },
-  { label: "Price: Low to High", value: "price-asc" },
-  { label: "Price: High to Low", value: "price-desc" },
-];
+interface Profile {
+  username?: string;
+  media_count?: number;
+  followers_count?: number;
+  follows_count?: number;
+}
 
-function parsePrice(p: string) {
-  return parseFloat(p.replace(/[$,]/g, ""));
+const HANDLE = process.env.NEXT_PUBLIC_INSTAGRAM_HANDLE ?? "DaVinciProject";
+
+function formatCount(n?: number): string {
+  if (!n) return "—";
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return String(n);
+}
+
+function PostCard({ post }: { post: InstagramPost }) {
+  const src =
+    post.media_type === "VIDEO" ? (post.thumbnail_url ?? post.media_url) : post.media_url;
+
+  return (
+    <a
+      href={post.permalink}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="group relative block overflow-hidden rounded-[12px] bg-[#f0ece6]"
+      style={{ aspectRatio: "1/1" }}
+    >
+      {src ? (
+        <Image
+          src={src}
+          alt={post.caption?.slice(0, 80) ?? "Instagram post"}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center">
+          <Instagram className="w-8 h-8 text-dv-muted/40" />
+        </div>
+      )}
+      {/* hover overlay */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors duration-300 flex items-center justify-center">
+        <Instagram className="w-7 h-7 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+      {post.media_type === "VIDEO" && (
+        <span className="absolute top-2.5 right-2.5 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+          VIDEO
+        </span>
+      )}
+      {post.media_type === "CAROUSEL_ALBUM" && (
+        <span className="absolute top-2.5 right-2.5 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+          ALBUM
+        </span>
+      )}
+    </a>
+  );
 }
 
 export default function GalleryPage() {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [sort, setSort] = useState("newest");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [posts, setPosts]       = useState<InstagramPost[]>([]);
+  const [profile, setProfile]   = useState<Profile>({});
+  const [cursor, setCursor]     = useState<string | null>(null);
+  const [hasMore, setHasMore]   = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [notConfigured, setNotConfigured] = useState(false);
 
-  const artistMap = useMemo(
-    () => Object.fromEntries(ARTISTS.map((a) => [a.id, a])),
-    []
-  );
+  async function fetchPosts(after?: string) {
+    const url = after ? `/api/instagram?after=${after}` : "/api/instagram";
+    const res = await fetch(url);
 
-  const displayed = useMemo(() => {
-    let result = [...ARTWORKS];
-
-    if (activeCategory !== "All") {
-      result = result.filter((a) => a.category === activeCategory);
+    if (res.status === 503) {
+      setNotConfigured(true);
+      return;
     }
 
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.title.toLowerCase().includes(q) ||
-          a.category.toLowerCase().includes(q) ||
-          (artistMap[a.artistId]?.name ?? "").toLowerCase().includes(q)
-      );
-    }
+    const data = await res.json();
+    if (data.error) return;
 
-    if (sort === "price-asc") result.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
-    if (sort === "price-desc") result.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+    setPosts((prev) => after ? [...prev, ...data.posts] : data.posts);
+    setCursor(data.nextCursor);
+    setHasMore(data.hasMore);
+    if (!after) setProfile(data.profile);
+  }
 
-    return result;
-  }, [search, activeCategory, sort, artistMap]);
+  useEffect(() => {
+    fetchPosts().finally(() => setLoading(false));
+  }, []);
+
+  async function handleLoadMore() {
+    if (!cursor) return;
+    setLoadingMore(true);
+    await fetchPosts(cursor);
+    setLoadingMore(false);
+  }
 
   return (
     <div className="flex flex-col">
 
-      {/* ── HERO HEADER ── */}
+      {/* ── HERO ── */}
       <section className="relative overflow-hidden" style={{ background: "#f7f2eb" }}>
         <div
           className="absolute inset-0 bg-cover bg-center opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "url(https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=1400&q=60)",
-          }}
+          style={{ backgroundImage: "url(https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=1400&q=60)" }}
         />
-        <div className="relative max-w-[1280px] mx-auto px-4 py-16 sm:py-20 text-center flex flex-col items-center gap-5">
+        <div className="relative max-w-[860px] mx-auto px-4 py-16 sm:py-20 text-center flex flex-col items-center gap-5">
+          <span className="inline-flex items-center gap-2 border border-dv-accent text-dv-accent text-[13px] px-4 py-1.5 rounded-full">
+            <Instagram className="w-3.5 h-3.5 shrink-0" />
+            From our Instagram @{HANDLE}
+          </span>
+
           <h1 className="font-serif italic text-dv-accent text-[40px] sm:text-[52px] leading-tight">
-            Our Gallery
+            Our Creative Gallery
           </h1>
-          <p className="text-[16px] text-dv-muted max-w-[520px] leading-relaxed">
-            Explore original artworks created by our talented special-needs artists.
-            Every purchase sends 80% directly to the artist.
+
+          <p className="text-[15px] text-dv-muted max-w-[520px] leading-relaxed">
+            Explore our journey through inspiring moments, beautiful artwork, and community
+            celebrations. Every image tells a story of hope, purpose, and artistic expression.
           </p>
 
-          {/* Search bar */}
-          <div className="w-full max-w-[540px] flex items-center gap-2 bg-white border border-black/15 rounded-full px-5 h-12 shadow-sm">
-            <Search className="w-4 h-4 text-dv-muted shrink-0" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search artworks, artists, or styles…"
-              className="flex-1 text-[15px] text-dv-text placeholder:text-dv-muted bg-transparent outline-none"
-            />
-            {search && (
-              <button onClick={() => setSearch("")} className="text-dv-muted hover:text-dv-text">
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          {/* Stats pills */}
-          <div className="flex gap-4 text-[13px] text-dv-muted">
-            <span className="bg-white/70 px-4 py-1.5 rounded-full border border-black/10">
-              {ARTWORKS.length} artworks
-            </span>
-            <span className="bg-white/70 px-4 py-1.5 rounded-full border border-black/10">
-              {ARTISTS.length} artists
-            </span>
-            <span className="bg-white/70 px-4 py-1.5 rounded-full border border-black/10">
-              80% to artists
-            </span>
-          </div>
+          <a
+            href={`https://instagram.com/${HANDLE}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-dv-accent text-white text-[14px] font-medium px-6 h-10 rounded-full hover:opacity-90 transition-opacity"
+          >
+            <Instagram className="w-4 h-4" />
+            Follow @{HANDLE}
+          </a>
         </div>
       </section>
 
-      {/* ── FILTER + SORT BAR ── */}
-      <div className="sticky top-[65px] z-30 bg-white border-b border-black/8 shadow-sm">
-        <div className="max-w-[1280px] mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Category pills — scroll on mobile */}
-          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`shrink-0 text-[13px] px-4 h-8 rounded-full border transition-colors whitespace-nowrap ${
-                  activeCategory === cat
-                    ? "bg-dv-accent text-white border-dv-accent"
-                    : "border-black/20 text-dv-muted hover:border-dv-accent hover:text-dv-accent"
-                }`}
-              >
-                {cat}
-              </button>
+      {/* ── STATS BAR ── */}
+      {!notConfigured && !loading && (
+        <div className="bg-white border-b border-black/8 py-5">
+          <div className="max-w-[860px] mx-auto px-4 flex justify-center gap-10 sm:gap-20">
+            {[
+              { label: "Posts",     value: profile.media_count ? `${profile.media_count}+` : "—" },
+              { label: "Followers", value: formatCount(profile.followers_count) },
+              { label: "Following", value: formatCount(profile.follows_count) },
+            ].map(({ label, value }) => (
+              <div key={label} className="flex flex-col items-center gap-0.5">
+                <p className="text-[20px] font-bold text-dv-accent">{value}</p>
+                <p className="text-[12px] text-dv-muted uppercase tracking-wider">{label}</p>
+              </div>
             ))}
           </div>
-
-          {/* Sort + filter button */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden sm:flex items-center gap-1.5 border border-black/15 rounded-full px-3 h-8">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-dv-muted" />
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value)}
-                className="text-[13px] text-dv-text bg-transparent outline-none cursor-pointer pr-1"
-              >
-                {SORT_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── ARTWORK GRID ── */}
+      {/* ── POSTS GRID ── */}
       <section className="bg-white py-12">
-        <div className="max-w-[1280px] mx-auto px-4">
-          {/* Results count */}
-          <div className="flex items-center justify-between mb-8">
-            <p className="text-[14px] text-dv-muted">
-              Showing <span className="font-semibold text-dv-text">{displayed.length}</span> artwork{displayed.length !== 1 ? "s" : ""}
-              {activeCategory !== "All" && (
-                <> in <span className="font-semibold text-dv-accent">{activeCategory}</span></>
-              )}
-            </p>
-            {(search || activeCategory !== "All") && (
-              <button
-                onClick={() => { setSearch(""); setActiveCategory("All"); }}
-                className="text-[13px] text-dv-muted hover:text-dv-accent flex items-center gap-1 transition-colors"
-              >
-                <X className="w-3.5 h-3.5" /> Clear filters
-              </button>
-            )}
-          </div>
+        <div className="max-w-[860px] mx-auto px-4">
 
-          {displayed.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-10">
-              {displayed.map((artwork) => {
-                const artist = artistMap[artwork.artistId];
-                return (
-                  <Link
-                    key={artwork.id}
-                    href={`/artwork/${artwork.id}`}
-                    className="group flex flex-col gap-3"
-                  >
-                    {/* Image */}
-                    <div
-                      className="relative overflow-hidden rounded-[12px] bg-[#f5f2ef]"
-                      style={{ aspectRatio: "1/1" }}
-                    >
-                      <Image
-                        src={artwork.image}
-                        alt={artwork.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      {/* Category badge */}
-                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-dv-text text-[11px] font-medium px-2.5 py-1 rounded-full">
-                        {artwork.category}
-                      </span>
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex flex-col gap-0.5">
-                      <p className="text-[15px] font-bold text-dv-text leading-snug group-hover:text-dv-accent transition-colors">
-                        {artwork.title}
-                      </p>
-                      <p className="text-[13px] text-dv-muted">by {artist?.name ?? "Unknown"}</p>
-                      <p className="text-[14px] font-semibold text-dv-text mt-1">{artwork.price}</p>
-                    </div>
-                  </Link>
-                );
-              })}
+          {loading ? (
+            <div className="flex items-center justify-center py-32">
+              <Loader2 className="w-7 h-7 animate-spin text-dv-accent" />
+            </div>
+          ) : notConfigured ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+              <div className="w-16 h-16 rounded-full bg-dv-accent/10 flex items-center justify-center">
+                <Instagram className="w-7 h-7 text-dv-accent" />
+              </div>
+              <p className="text-[18px] font-serif italic text-dv-accent">Instagram not connected</p>
+              <p className="text-[14px] text-dv-muted max-w-[340px]">
+                Add your <span className="font-semibold">INSTAGRAM_ACCESS_TOKEN</span> to your
+                environment variables to display your feed here.
+              </p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
+              <p className="text-[32px]">📸</p>
+              <p className="text-[16px] font-semibold text-dv-text">No posts yet</p>
+              <p className="text-[14px] text-dv-muted">Posts from your Instagram will appear here.</p>
             </div>
           ) : (
-            <div className="py-24 flex flex-col items-center gap-4 text-center">
-              <div className="w-16 h-16 rounded-full bg-dv-accent/10 flex items-center justify-center">
-                <Search className="w-7 h-7 text-dv-accent" />
+            <>
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
               </div>
-              <p className="text-[18px] font-serif italic text-dv-accent">No artworks found</p>
-              <p className="text-[14px] text-dv-muted">Try a different search or category.</p>
-              <button
-                onClick={() => { setSearch(""); setActiveCategory("All"); }}
-                className="mt-2 border border-dv-accent text-dv-accent text-[14px] px-6 h-9 rounded-full hover:bg-dv-accent/5 transition-colors"
-              >
-                Clear filters
-              </button>
-            </div>
+
+              {hasMore && (
+                <div className="flex justify-center mt-10">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="border border-dv-accent text-dv-accent text-[14px] font-medium px-7 h-10 rounded-full flex items-center gap-2 hover:bg-dv-accent/5 transition-colors disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Loading…</>
+                    ) : (
+                      "Load More Posts"
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
 
-      {/* ── BOTTOM CTA ── */}
+      {/* ── JOIN OUR COMMUNITY ── */}
       <section style={{ background: "#f7f2eb" }} className="py-16">
         <div className="max-w-[560px] mx-auto px-4 text-center flex flex-col items-center gap-5">
+          <span className="text-[12px] uppercase tracking-widest text-dv-muted border border-dv-muted/40 px-4 py-1 rounded-full">
+            ✦ Join Our Community
+          </span>
           <h2 className="font-serif italic text-dv-accent text-[32px] leading-tight">
-            Commission a Custom Piece
+            Be Part of Our Creative Journey
           </h2>
           <p className="text-[15px] text-dv-muted leading-relaxed">
-            Want something unique? Connect directly with one of our artists to commission
-            a piece made just for you.
+            Follow us on Instagram for daily inspiration, behind-the-scenes moments, artist stories,
+            and updates on our workshops and exhibitions. Your support helps our artists thrive!
           </p>
-          <Link
-            href="/artists"
-            className="bg-dv-accent text-white text-[15px] font-medium px-7 h-11 rounded-full flex items-center hover:opacity-90 transition-opacity"
-          >
-            Meet the Artists
-          </Link>
+          <div className="flex flex-wrap justify-center gap-3">
+            <a
+              href={`https://instagram.com/${HANDLE}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-dv-accent text-white text-[14px] font-medium px-6 h-10 rounded-full hover:opacity-90 transition-opacity"
+            >
+              <Instagram className="w-4 h-4" />
+              Follow @{HANDLE}
+            </a>
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+              className="inline-flex items-center gap-2 border border-dv-accent text-dv-accent text-[14px] font-medium px-6 h-10 rounded-full hover:bg-dv-accent/5 transition-colors"
+            >
+              <ArrowUp className="w-4 h-4" />
+              Back to Top
+            </button>
+          </div>
         </div>
       </section>
+
+      {/* ── ADMIN NOTE (only shown when not configured) ── */}
+      {notConfigured && (
+        <div className="bg-amber-50 border-t border-amber-200 px-4 py-3">
+          <p className="text-[13px] text-amber-800 text-center max-w-[700px] mx-auto">
+            <span className="font-semibold">Admin Note:</span> This gallery requires an Instagram access token.
+            Add <span className="font-mono bg-amber-100 px-1 rounded">INSTAGRAM_ACCESS_TOKEN</span> and{" "}
+            <span className="font-mono bg-amber-100 px-1 rounded">NEXT_PUBLIC_INSTAGRAM_HANDLE</span> to
+            your environment variables.{" "}
+            <Link href="/admin" className="underline font-medium">Go to Admin Panel →</Link>
+          </p>
+        </div>
+      )}
 
     </div>
   );
