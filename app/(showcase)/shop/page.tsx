@@ -8,11 +8,11 @@ import type { Artwork, Artist } from "@/lib/db/types";
 
 export default function ShopPage() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
-  const [artists,  setArtists]  = useState<Pick<Artist, "id" | "name">[]>([]);
-  const [loading,  setLoading]  = useState(true);
-  const [search,         setSearch]         = useState("");
+  const [artists, setArtists] = useState<Pick<Artist, "id" | "name">[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All Categories");
-  const [activeArtist,   setActiveArtist]   = useState("All Artists");
+  const [activeArtist, setActiveArtist] = useState("All Artists");
 
   useEffect(() => {
     (async () => {
@@ -26,17 +26,19 @@ export default function ShopPage() {
 
   const artistMap = useMemo(
     () => Object.fromEntries(artists.map((a) => [a.id, a])),
-    [artists]
+    [artists],
   );
 
   const categories = useMemo(() => {
-    const unique = Array.from(new Set(artworks.map((a) => a.category).filter(Boolean) as string[])).sort();
+    const unique = Array.from(
+      new Set(artworks.map((a) => a.category).filter(Boolean) as string[]),
+    ).sort();
     return ["All Categories", ...unique];
   }, [artworks]);
 
   const artistOptions = useMemo(
     () => ["All Artists", ...artists.map((a) => a.name)],
-    [artists]
+    [artists],
   );
 
   const displayed = useMemo(() => {
@@ -48,7 +50,7 @@ export default function ShopPage() {
 
     if (activeArtist !== "All Artists") {
       result = result.filter(
-        (a) => (artistMap[a.artist_id ?? ""]?.name ?? "") === activeArtist
+        (a) => (artistMap[a.artist_id ?? ""]?.name ?? "") === activeArtist,
       );
     }
 
@@ -58,7 +60,7 @@ export default function ShopPage() {
         (a) =>
           a.title.toLowerCase().includes(q) ||
           (a.category ?? "").toLowerCase().includes(q) ||
-          (artistMap[a.artist_id ?? ""]?.name ?? "").toLowerCase().includes(q)
+          (artistMap[a.artist_id ?? ""]?.name ?? "").toLowerCase().includes(q),
       );
     }
 
@@ -73,7 +75,8 @@ export default function ShopPage() {
           Shop Artworks
         </h1>
         <p className="text-[15px] text-dv-muted max-w-[460px] mx-auto leading-relaxed">
-          Every purchase supports our talented artists and their creative journey.
+          Every purchase supports our talented artists and their creative
+          journey.
         </p>
       </div>
 
@@ -97,7 +100,11 @@ export default function ShopPage() {
               onChange={(e) => setActiveCategory(e.target.value)}
               className="flex-1 text-[14px] text-dv-text bg-transparent outline-none cursor-pointer appearance-none"
             >
-              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex items-center gap-2 px-5 py-3 sm:w-[200px]">
@@ -107,7 +114,11 @@ export default function ShopPage() {
               onChange={(e) => setActiveArtist(e.target.value)}
               className="flex-1 text-[14px] text-dv-text bg-transparent outline-none cursor-pointer appearance-none"
             >
-              {artistOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+              {artistOptions.map((a) => (
+                <option key={a} value={a}>
+                  {a}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -122,7 +133,8 @@ export default function ShopPage() {
         ) : (
           <>
             <p className="text-[13px] text-dv-muted mb-5">
-              Showing {displayed.length} artwork{displayed.length !== 1 ? "s" : ""}
+              Showing {displayed.length} artwork
+              {displayed.length !== 1 ? "s" : ""}
             </p>
 
             {displayed.length > 0 ? (
@@ -149,7 +161,7 @@ export default function ShopPage() {
                           </div>
                         )}
                         <span className="absolute top-2 right-2 bg-dv-accent text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-                          {artwork.category ?? "Art"}
+                          {artwork.dimensions ?? "Art"}
                         </span>
                       </div>
                       <div className="p-3 flex flex-col gap-1 flex-1">
@@ -175,10 +187,18 @@ export default function ShopPage() {
               </div>
             ) : (
               <div className="py-24 flex flex-col items-center gap-3 text-center">
-                <p className="font-serif italic text-dv-accent text-[20px]">No artworks found</p>
-                <p className="text-[14px] text-dv-muted">Try a different search or filter.</p>
+                <p className="font-serif italic text-dv-accent text-[20px]">
+                  No artworks found
+                </p>
+                <p className="text-[14px] text-dv-muted">
+                  Try a different search or filter.
+                </p>
                 <button
-                  onClick={() => { setSearch(""); setActiveCategory("All Categories"); setActiveArtist("All Artists"); }}
+                  onClick={() => {
+                    setSearch("");
+                    setActiveCategory("All Categories");
+                    setActiveArtist("All Artists");
+                  }}
                   className="mt-2 border border-dv-accent text-dv-accent text-[13px] px-5 h-9 rounded-full hover:bg-dv-accent/5 transition-colors"
                 >
                   Clear filters
@@ -191,12 +211,16 @@ export default function ShopPage() {
 
       {/* Bottom CTA */}
       <div className="max-w-[1280px] mx-auto px-4 mt-12">
-        <div className="rounded-2xl py-12 px-6 text-center flex flex-col items-center gap-4" style={{ background: "#f0ebe3" }}>
+        <div
+          className="rounded-2xl py-12 px-6 text-center flex flex-col items-center gap-4"
+          style={{ background: "#f0ebe3" }}
+        >
           <h2 className="font-serif italic text-dv-accent text-[28px] leading-tight">
             Can&apos;t find what you&apos;re looking for?
           </h2>
           <p className="text-[14px] text-dv-muted max-w-[380px] leading-relaxed">
-            Our artists are always creating new pieces. Check back regularly or contact us for custom requests.
+            Our artists are always creating new pieces. Check back regularly or
+            contact us for custom requests.
           </p>
           <Link
             href="/contact"
