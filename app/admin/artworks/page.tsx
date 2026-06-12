@@ -11,8 +11,11 @@ import {
   Plus,
   ArrowLeft,
   X,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import type { Artist, Artwork } from "@/lib/db/types";
+import { ConfirmModal } from "@/components/admin/ConfirmModal";
 
 /* ── shared labeled input ── */
 function LabeledInput({
@@ -178,7 +181,11 @@ function ArtworkForm({
         : "/api/admin/artworks";
       const method = isEdit ? "PATCH" : "POST";
       const res = await fetch(url, { method, body: fd });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed");
+      if (!res.ok) {
+        let msg = "Failed";
+        try { msg = (await res.json()).error ?? msg; } catch { /* non-JSON error body */ }
+        throw new Error(msg);
+      }
       onSaved();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to save.");
@@ -474,11 +481,13 @@ export default function AdminArtworksPage() {
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("All Categories");
+  const [dimension, setDimension] = useState("All Dimensions");
   const [selected, setSelected] = useState<Artwork | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Artwork | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Artwork | null>(null);
+  const [view, setView] = useState<"grid" | "table">("grid");
 
   const load = async () => {
     setLoading(true);
@@ -496,11 +505,11 @@ export default function AdminArtworksPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this artwork? This cannot be undone.")) return;
     setDeleting(id);
     setSelected(null);
     await fetch(`/api/admin/artworks/${id}`, { method: "DELETE" });
     setDeleting(null);
+    setConfirmTarget(null);
     load();
   };
 
@@ -540,22 +549,22 @@ export default function AdminArtworksPage() {
       />
     );
 
-  const categories = [
-    "All Categories",
+  const dimensions = [
+    "All Dimensions",
     ...Array.from(
-      new Set(artworks.map((a) => a.category).filter(Boolean) as string[]),
+      new Set(artworks.map((a) => a.dimensions).filter(Boolean) as string[]),
     ),
   ];
   const filtered = artworks.filter((a) => {
     const matchSearch =
       !search || a.title.toLowerCase().includes(search.toLowerCase());
-    const matchCat = category === "All Categories" || a.category === category;
-    return matchSearch && matchCat;
+    const matchDim = dimension === "All Dimensions" || a.dimensions === dimension;
+    return matchSearch && matchDim;
   });
 
   const stats = [
     { label: "Total Artworks", value: artworks.length },
-    { label: "Categories", value: categories.length - 1 },
+    { label: "Dimensions", value: dimensions.length - 1 },
     { label: "Artists", value: artists.length },
   ];
 
@@ -607,14 +616,30 @@ export default function AdminArtworksPage() {
           <div className="flex items-center gap-2 bg-white border border-ad-border rounded-[8px] px-3 h-10 min-w-[160px]">
             <Filter className="w-4 h-4 text-ad-gray shrink-0" />
             <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              value={dimension}
+              onChange={(e) => setDimension(e.target.value)}
               className="flex-1 text-[13px] text-ad-dark outline-none bg-transparent"
             >
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
+              {dimensions.map((d) => (
+                <option key={d}>{d}</option>
               ))}
             </select>
+          </div>
+          <div className="flex items-center bg-white border border-ad-border rounded-[8px] h-10 p-1 gap-1 shrink-0">
+            <button
+              onClick={() => setView("grid")}
+              className={`flex items-center justify-center w-8 h-8 rounded-[6px] transition-colors ${view === "grid" ? "bg-ad-purple text-white" : "text-ad-gray hover:bg-gray-100"}`}
+              title="Grid view"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView("table")}
+              className={`flex items-center justify-center w-8 h-8 rounded-[6px] transition-colors ${view === "table" ? "bg-ad-purple text-white" : "text-ad-gray hover:bg-gray-100"}`}
+              title="Table view"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -628,7 +653,7 @@ export default function AdminArtworksPage() {
               ? 'No artworks yet. Click "Create New Artwork" to add one.'
               : "No artworks match your filters."}
           </div>
-        ) : (
+        ) : view === "grid" ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
             {filtered.map((artwork) => {
               const artist = artists.find((a) => a.id === artwork.artist_id);
@@ -677,6 +702,86 @@ export default function AdminArtworksPage() {
                 </div>
               );
             })}
+          </div>
+        ) : (
+          <div className="bg-white border border-ad-border rounded-[16px] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-[#f9fafb] border-b border-ad-border">
+                  <tr>
+                    {["Artwork", "Artist", "Category", "SKU", "Dimensions", "Price", "Actions"].map((col) => (
+                      <th key={col} className="px-4 py-3 text-left text-[12px] font-semibold text-ad-gray whitespace-nowrap">{col}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((artwork) => {
+                    const artist = artists.find((a) => a.id === artwork.artist_id);
+                    const thumbUrl = artwork.photos?.[0] ?? artwork.image_url;
+                    return (
+                      <tr key={artwork.id} className="border-b border-ad-border last:border-none hover:bg-gray-50">
+                        <td className="px-4 py-3 min-w-[220px]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-[6px] overflow-hidden shrink-0 bg-as-card relative">
+                              {thumbUrl ? (
+                                <Image src={thumbUrl} alt={artwork.title} fill className="object-cover" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-ad-purple/40 font-bold text-lg">
+                                  {artwork.title[0]}
+                                </div>
+                              )}
+                              {deleting === artwork.id && (
+                                <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 animate-spin text-ad-purple" />
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-[13px] font-medium text-ad-dark truncate max-w-[160px]">{artwork.title}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-[13px] text-ad-gray whitespace-nowrap">{artist?.name ?? "—"}</td>
+                        <td className="px-4 py-3">
+                          {artwork.category ? (
+                            <span className="text-[12px] bg-ad-purple/10 text-ad-purple px-2 py-0.5 rounded-full whitespace-nowrap">{artwork.category}</span>
+                          ) : <span className="text-[13px] text-ad-gray">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-[13px] text-ad-gray">{artwork.sku ?? "—"}</td>
+                        <td className="px-4 py-3 text-[13px] text-ad-gray whitespace-nowrap">{artwork.dimensions ?? "—"}</td>
+                        <td className="px-4 py-3 text-[13px] font-semibold text-ad-dark whitespace-nowrap">
+                          {artwork.price != null ? `$${artwork.price}` : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setSelected(artwork)}
+                              className="p-1.5 text-ad-gray hover:text-ad-purple hover:bg-ad-purple/10 rounded-[6px] transition-colors"
+                              title="View"
+                            >
+                              <Search className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setEditing(artwork)}
+                              className="p-1.5 text-ad-gray hover:text-blue-600 hover:bg-blue-50 rounded-[6px] transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => setConfirmTarget(artwork)}
+                              disabled={deleting === artwork.id}
+                              className="p-1.5 text-ad-gray hover:text-red-600 hover:bg-red-50 rounded-[6px] transition-colors disabled:opacity-40"
+                              title="Delete"
+                            >
+                              {deleting === artwork.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -814,7 +919,7 @@ export default function AdminArtworksPage() {
                   <Pencil className="w-4 h-4" /> Edit
                 </button>
                 <button
-                  onClick={() => handleDelete(selected.id)}
+                  onClick={() => { setSelected(null); setConfirmTarget(selected); }}
                   disabled={deleting === selected.id}
                   className="flex items-center gap-2 px-4 h-10 rounded-[8px] border border-red-200 text-[14px] text-red-600 hover:bg-red-50 disabled:opacity-40"
                 >
@@ -824,6 +929,18 @@ export default function AdminArtworksPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Delete confirm modal */}
+      {confirmTarget && (
+        <ConfirmModal
+          title="Delete Artwork"
+          message={`Are you sure you want to delete "${confirmTarget.title}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          loading={deleting === confirmTarget.id}
+          onConfirm={() => handleDelete(confirmTarget.id)}
+          onCancel={() => setConfirmTarget(null)}
+        />
       )}
     </>
   );

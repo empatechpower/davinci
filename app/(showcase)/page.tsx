@@ -193,7 +193,7 @@ export default async function HomePage() {
               </div>
             ) : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              {galleryItems.map((artwork, i) => (
+              {galleryItems.map((artwork) => (
                 <Link key={artwork.id} href={`/shop/${artwork.slug}`} className="group flex flex-col gap-2.5">
                   <div className="relative overflow-hidden rounded-[12px] bg-dv-bg" style={{ aspectRatio: "1/1" }}>
                     <Image
@@ -202,9 +202,11 @@ export default async function HomePage() {
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute top-2.5 right-2.5 w-8 h-8 bg-dv-accent text-white text-[13px] font-bold rounded-full flex items-center justify-center shadow-sm">
-                      {i + 1}
-                    </span>
+                    {artwork.dimensions && (
+                      <span className="absolute top-2.5 right-2.5 bg-dv-accent/90 text-white text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm">
+                        {artwork.dimensions}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="text-[11px] text-dv-muted uppercase tracking-wider mb-0.5">

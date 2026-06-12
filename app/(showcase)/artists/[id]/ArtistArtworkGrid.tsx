@@ -12,12 +12,12 @@ interface Artwork {
   title: string;
   price: number | null;
   image_url?: string | null;
-  category: string | null;
+  dimensions: string | null;
 }
 
 export default function ArtistArtworkGrid({ artworks }: { artworks: Artwork[] }) {
-  const categories = Array.from(new Set(artworks.map((a) => a.category).filter(Boolean) as string[]));
-  const [activeCategory, setActiveCategory] = useState<string>(categories[0] ?? "");
+  const dims = Array.from(new Set(artworks.map((a) => a.dimensions).filter(Boolean) as string[]));
+  const [activeDim, setActiveDim] = useState<string>(dims[0] ?? "");
   const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
   const { addToCart } = useCart();
 
@@ -27,30 +27,30 @@ export default function ArtistArtworkGrid({ artworks }: { artworks: Artwork[] })
     setTimeout(() => setAddedIds((prev) => { const n = new Set(prev); n.delete(artworkId); return n; }), 2000);
   }, [addToCart]);
 
-  const filtered = categories.length > 1
-    ? artworks.filter((a) => a.category === activeCategory)
+  const filtered = dims.length > 1
+    ? artworks.filter((a) => a.dimensions === activeDim)
     : artworks;
 
   return (
     <div>
-      {/* Category tabs */}
-      {categories.length > 1 && (
+      {/* Dimension tabs */}
+      {dims.length > 1 && (
         <div className="flex gap-8 mb-6">
-          {categories.map((cat) => (
+          {dims.map((dim) => (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
+              key={dim}
+              onClick={() => setActiveDim(dim)}
               style={{
                 fontSize: 14,
-                color: activeCategory === cat ? "#2d3748" : "#718096",
-                fontWeight: activeCategory === cat ? 600 : 400,
+                color: activeDim === dim ? "#2d3748" : "#718096",
+                fontWeight: activeDim === dim ? 600 : 400,
                 background: "none",
                 border: "none",
                 cursor: "pointer",
                 padding: 0,
               }}
             >
-              {cat}
+              {dim}
             </button>
           ))}
         </div>
@@ -84,6 +84,9 @@ export default function ArtistArtworkGrid({ artworks }: { artworks: Artwork[] })
                 <Link href={`/shop/${artwork.slug}`} className="text-[15px] font-medium leading-snug hover:opacity-70 transition-opacity" style={{ color: "#2d3748" }}>
                   {artwork.title}
                 </Link>
+                {artwork.dimensions && (
+                  <p className="text-[12px]" style={{ color: "#718096" }}>{artwork.dimensions}</p>
+                )}
                 <p style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", color: "#ff8c42", fontSize: 18, fontWeight: 600 }}>
                   {artwork.price != null ? `$${artwork.price}` : "—"}
                 </p>
@@ -103,7 +106,7 @@ export default function ArtistArtworkGrid({ artworks }: { artworks: Artwork[] })
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center py-12 text-[14px]" style={{ color: "#718096" }}>No artworks in this category.</p>
+        <p className="text-center py-12 text-[14px]" style={{ color: "#718096" }}>No artworks for this dimension.</p>
       )}
     </div>
   );

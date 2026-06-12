@@ -241,21 +241,17 @@ export default function AboutPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="relative rounded-[20px] overflow-hidden aspect-[4/3]">
-              <Image
-                src="https://images.unsplash.com/photo-1547333590-17b24b578176?w=900&q=80"
-                alt="Community art session"
-                fill
-                className="object-cover"
-              />
+            <div className="relative rounded-[20px] overflow-hidden aspect-[4/3] flex items-center justify-center" style={{ background: "#ede8e0" }}>
+              <div className="flex flex-col items-center gap-2 text-center px-6">
+                <Palette className="w-10 h-10" style={{ color: "#c9b89a" }} />
+                <p className="text-[14px]" style={{ color: "#a09080" }}>Community art session photo</p>
+              </div>
             </div>
-            <div className="relative rounded-[20px] overflow-hidden aspect-[4/3]">
-              <Image
-                src="https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=900&q=80"
-                alt="Artists collaborating"
-                fill
-                className="object-cover"
-              />
+            <div className="relative rounded-[20px] overflow-hidden aspect-[4/3] flex items-center justify-center" style={{ background: "#ede8e0" }}>
+              <div className="flex flex-col items-center gap-2 text-center px-6">
+                <Users className="w-10 h-10" style={{ color: "#c9b89a" }} />
+                <p className="text-[14px]" style={{ color: "#a09080" }}>Artists collaborating photo</p>
+              </div>
             </div>
           </div>
         </div>

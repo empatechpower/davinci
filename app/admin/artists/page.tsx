@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Search, Eye, Pencil, Trash2, Palette, ShoppingBag, Users, Plus, ArrowLeft, Loader2 } from "lucide-react";
 import type { Artist, Artwork } from "@/lib/db/types";
+import { ConfirmModal } from "@/components/admin/ConfirmModal";
 
 /* ── shared input ── */
 function LabeledInput({ label, type = "text", placeholder, value, onChange, className = "" }: {
@@ -236,10 +237,11 @@ export default function AdminArtistsPage() {
   const [artworks, setArtworks]   = useState<Artwork[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
-  const [selected, setSelected]   = useState<Artist | null>(null);
-  const [creating, setCreating]   = useState(false);
-  const [editing, setEditing]     = useState<Artist | null>(null);
-  const [deleting, setDeleting]   = useState<string | null>(null);
+  const [selected, setSelected]       = useState<Artist | null>(null);
+  const [creating, setCreating]       = useState(false);
+  const [editing, setEditing]         = useState<Artist | null>(null);
+  const [deleting, setDeleting]       = useState<string | null>(null);
+  const [confirmTarget, setConfirmTarget] = useState<Artist | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -253,10 +255,10 @@ export default function AdminArtistsPage() {
   useEffect(() => { load(); }, []);
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this artist? This cannot be undone.")) return;
     setDeleting(id);
     await fetch(`/api/admin/artists/${id}`, { method: "DELETE" });
     setDeleting(null);
+    setConfirmTarget(null);
     load();
   };
 
@@ -364,7 +366,7 @@ export default function AdminArtistsPage() {
                               className="p-1.5 text-ad-gray hover:text-blue-600 hover:bg-blue-50 rounded-[6px] transition-colors" title="Edit">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDelete(artist.id)} disabled={deleting === artist.id}
+                            <button onClick={() => setConfirmTarget(artist)} disabled={deleting === artist.id}
                               className="p-1.5 text-ad-gray hover:text-red-600 hover:bg-red-50 rounded-[6px] transition-colors disabled:opacity-40" title="Delete">
                               {deleting === artist.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                             </button>
@@ -384,6 +386,18 @@ export default function AdminArtistsPage() {
           )}
         </div>
       </div>
+
+      {/* Delete confirm modal */}
+      {confirmTarget && (
+        <ConfirmModal
+          title="Delete Artist"
+          message={`Are you sure you want to delete "${confirmTarget.name}"? This cannot be undone.`}
+          confirmLabel="Delete"
+          loading={deleting === confirmTarget.id}
+          onConfirm={() => handleDelete(confirmTarget.id)}
+          onCancel={() => setConfirmTarget(null)}
+        />
+      )}
 
       {/* View modal */}
       {selected && (
@@ -420,11 +434,16 @@ export default function AdminArtistsPage() {
                   <p className="text-[13px] font-semibold text-ad-dark mb-2">Artworks</p>
                   <div className="grid grid-cols-3 gap-2">
                     {artworks.filter((w) => w.artist_id === selected.id).map((work) => (
-                      <div key={work.id} className="aspect-square rounded-[8px] overflow-hidden bg-as-card">
-                        {work.image_url
-                          ? <Image src={work.image_url} alt={work.title} width={120} height={120} className="w-full h-full object-cover" />
-                          : <div className="w-full h-full bg-ad-purple/10 flex items-center justify-center text-ad-purple text-xs">{work.title[0]}</div>
-                        }
+                      <div key={work.id} className="rounded-[8px] overflow-hidden border border-ad-border bg-as-card">
+                        <div className="aspect-square relative overflow-hidden">
+                          {work.image_url
+                            ? <Image src={work.image_url} alt={work.title} fill className="object-cover" />
+                            : <div className="w-full h-full bg-ad-purple/10 flex items-center justify-center text-ad-purple text-xs">{work.title[0]}</div>
+                          }
+                        </div>
+                        {work.dimensions && (
+                          <p className="text-[10px] text-ad-gray text-center px-1 py-1 truncate">{work.dimensions}</p>
+                        )}
                       </div>
                     ))}
                   </div>
