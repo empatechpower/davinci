@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { execute, query } from "@/lib/db";
+import { execute, query, queryOne } from "@/lib/db";
 
 function verifyHmac(params: Record<string, string>, salt: string): boolean {
   try {
@@ -34,12 +34,18 @@ export async function POST(req: NextRequest) {
     status === "completed" ? "completed" :
     status === "failed"    ? "failed"    : "pending";
 
+  const existing = await queryOne<{ status: string }>(
+    "SELECT status FROM orders WHERE order_number = $1",
+    [reference_number]
+  );
+  const alreadyCompleted = existing?.status === "completed";
+
   await execute(
     "UPDATE orders SET status = $1 WHERE order_number = $2",
     [orderStatus, reference_number]
   );
 
-  if (orderStatus === "completed") {
+  if (orderStatus === "completed" && !alreadyCompleted) {
     const items = await query<{ artwork_id: string | null; quantity: number }>(
       `SELECT oi.artwork_id, oi.quantity
        FROM order_items oi

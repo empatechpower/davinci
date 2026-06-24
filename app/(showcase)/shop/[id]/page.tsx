@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ShoppingCart, Share2, Palette, Heart, Award, Check, Loader2 } from "lucide-react";
+import { ChevronLeft, ShoppingCart, Share2, Palette, Heart, Award, Check, Loader2, Copy } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import type { Artwork, Artist } from "@/lib/db/types";
@@ -15,6 +15,7 @@ export default function ShopArtworkPage() {
   const [artist,  setArtist]  = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [added,      setAdded]      = useState(false);
+  const [copied,     setCopied]     = useState(false);
   const [activePhoto, setActivePhoto] = useState(0);
   const { addToCart } = useCart();
 
@@ -35,6 +36,19 @@ export default function ShopArtworkPage() {
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }, [addToCart, artwork]);
+
+  const handleShare = useCallback(async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: artwork?.title, url });
+        return;
+      } catch {}
+    }
+    await navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [artwork]);
 
   if (loading) {
     return (
@@ -166,14 +180,9 @@ export default function ShopArtworkPage() {
               </div>
 
               {artwork.category && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-[12px] text-dv-muted">Format</label>
-                  <select
-                    className="bg-white border border-black/15 rounded-[10px] px-3 h-10 text-[14px] text-dv-text outline-none cursor-pointer"
-                    defaultValue={artwork.category}
-                  >
-                    <option value={artwork.category}>{artwork.category}</option>
-                  </select>
+                <div className="flex items-center gap-2 text-[13px]">
+                  <span className="text-dv-muted">Category:</span>
+                  <span className="font-medium text-dv-text">{artwork.category}</span>
                 </div>
               )}
 
@@ -185,8 +194,12 @@ export default function ShopArtworkPage() {
                   {added ? <Check className="w-4 h-4" /> : <ShoppingCart className="w-4 h-4" />}
                   {added ? "Added!" : "Add to Cart"}
                 </button>
-                <button className="w-11 h-11 rounded-full border border-black/15 flex items-center justify-center text-dv-muted hover:text-dv-accent hover:border-dv-accent transition-colors shrink-0">
-                  <Share2 className="w-4 h-4" />
+                <button
+                  onClick={handleShare}
+                  title={copied ? "Copied!" : "Share"}
+                  className="w-11 h-11 rounded-full border border-black/15 flex items-center justify-center text-dv-muted hover:text-dv-accent hover:border-dv-accent transition-colors shrink-0"
+                >
+                  {copied ? <Copy className="w-4 h-4 text-dv-accent" /> : <Share2 className="w-4 h-4" />}
                 </button>
               </div>
             </div>
@@ -261,8 +274,12 @@ export default function ShopArtworkPage() {
           <p className="text-[15px] text-dv-muted leading-relaxed max-w-[520px]">
             When you purchase this artwork, you&apos;re not just buying art — you&apos;re supporting{" "}
             {artist?.name}&apos;s creative journey.{" "}
-            <span className="font-semibold text-dv-text">60% of profits</span> from this sale go
-            directly to the artist.
+            {artwork.artist_receives != null ? (
+              <span className="font-semibold text-dv-text">{artwork.artist_receives}% of the sale price</span>
+            ) : (
+              <span className="font-semibold text-dv-text">A portion of proceeds</span>
+            )}{" "}
+            goes directly to the artist.
           </p>
           <button
             onClick={handleAddToCart}

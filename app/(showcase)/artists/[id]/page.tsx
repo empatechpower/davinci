@@ -89,7 +89,7 @@ export default async function ArtistPage({ params }: Props) {
                 </div>
                 <div className="flex flex-col items-center justify-center px-8 py-5 rounded-[16px]" style={{ background: "#fdf3ea" }}>
                   <span style={{ fontFamily: "Georgia, 'Times New Roman', serif", fontStyle: "italic", fontSize: 34, color: "#ff8c42", lineHeight: 1 }}>{artworks.length}</span>
-                  <span className="text-[12px] mt-1.5" style={{ color: "#718096" }}>Available Works</span>
+                  <span className="text-[12px] mt-1.5" style={{ color: "#718096" }}>Total Works</span>
                 </div>
               </div>
 
@@ -104,7 +104,7 @@ export default async function ArtistPage({ params }: Props) {
               Artworks by {artist.name}
             </h2>
             <p className="text-[14px] mt-1" style={{ color: "#718096" }}>
-              {artworks.length} {artworks.length === 1 ? "piece" : "pieces"} available
+              {artworks.length} {artworks.length === 1 ? "piece" : "pieces"}
             </p>
           </div>
           <div className="p-8">

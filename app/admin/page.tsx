@@ -20,15 +20,18 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
-  const [artistCount, artworkCount, orders] = await Promise.all([
+  const [artistCount, artworkCount, orders, salesRow] = await Promise.all([
     queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM artists"),
     queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM artworks"),
     query<Order>(
       "SELECT id, order_number, customer_name, total, status, created_at FROM orders ORDER BY created_at DESC LIMIT 5"
     ),
+    queryOne<{ total: number }>(
+      "SELECT COALESCE(SUM(total), 0) AS total FROM orders WHERE status = 'completed'"
+    ),
   ]);
 
-  const totalSales = orders.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+  const totalSales = Number(salesRow?.total ?? 0);
 
   const overviewStats = [
     { label: "Total Artists",  value: String(artistCount?.c  ?? 0) },

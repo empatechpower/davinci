@@ -1,20 +1,22 @@
 import Image from "next/image";
 import Link from "next/link";
 import { MapPin, Users, Palette, Heart, Paintbrush } from "lucide-react";
-import { query } from "@/lib/db";
+import { query, queryOne } from "@/lib/db";
 import type { Artist, Artwork } from "@/lib/db/types";
 
-const STATS = [
-  { Icon: Users,   value: "25+",      label: "Talented Artists",  bg: "#fde8e4", color: "#ff8c42", italic: false },
-  { Icon: Palette, value: "500+",     label: "Artworks Created",  bg: "#fff0e4", color: "#ff8c42", italic: false },
-  { Icon: Heart,   value: "Proceeds", label: "Goes to Artists",   bg: "#e0f5f2", color: "#2a9d8f", italic: true  },
-];
-
 export default async function HomePage() {
-  const [artists, artworks] = await Promise.all([
+  const [artists, artworks, artistCount, artworkCount] = await Promise.all([
     query<Artist>("SELECT * FROM artists ORDER BY created_at DESC LIMIT 3"),
     query<Artwork>("SELECT * FROM artworks ORDER BY created_at DESC LIMIT 4"),
+    queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM artists"),
+    queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM artworks"),
   ]);
+
+  const stats = [
+    { Icon: Users,   value: String(artistCount?.c  ?? 0), label: "Talented Artists", bg: "#fde8e4", color: "#ff8c42", italic: false },
+    { Icon: Palette, value: String(artworkCount?.c ?? 0), label: "Artworks Created",  bg: "#fff0e4", color: "#ff8c42", italic: false },
+    { Icon: Heart,   value: "Proceeds",                    label: "Goes to Artists",   bg: "#e0f5f2", color: "#2a9d8f", italic: true  },
+  ];
 
   const artistIds = [...new Set(artworks.map((a) => a.artist_id).filter(Boolean))];
   let artistMap: Record<string, string> = {};
@@ -27,7 +29,6 @@ export default async function HomePage() {
     artistMap = Object.fromEntries(rows.map((a) => [a.id, a.name]));
   }
 
-  console.log("artists:", JSON.stringify(artists, null, 2));
   const featuredArtists = artists.filter((a) => a.image_url);
   const galleryItems = artworks.filter((a) => a.image_url);
 
@@ -86,7 +87,7 @@ export default async function HomePage() {
       <section className="bg-white py-12">
         <div className="max-w-[1280px] mx-auto px-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {STATS.map(({ Icon, value, label, bg, color, italic }) => (
+            {stats.map(({ Icon, value, label, bg, color, italic }) => (
               <div
                 key={label}
                 className="rounded-[16px] px-8 py-8 flex flex-col items-center gap-3 text-center"

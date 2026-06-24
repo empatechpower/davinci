@@ -35,25 +35,37 @@ export default function DashboardPage() {
   const [orders,   setOrders]   = useState<OrderWithItems[]>([]);
   const [regs,     setRegs]     = useState<RegWithEvent[]>([]);
   const [loading,  setLoading]  = useState(true);
+  const [profile,  setProfile]  = useState<{ phone?: string | null; address?: string | null }>({});
   const [activeTab, setActiveTab]       = useState<"orders" | "events">("orders");
   const [eventFilter, setEventFilter]   = useState("All Events");
   const [selectedReg, setSelectedReg]   = useState<RegWithEvent | null>(null);
 
   useEffect(() => {
     (async () => {
-      const [ordRes, regRes] = await Promise.all([
+      const [ordRes, regRes, profRes] = await Promise.all([
         fetch("/api/user/orders"),
         fetch("/api/user/registrations"),
+        fetch("/api/user/profile"),
       ]);
-      const [ords, registrations] = await Promise.all([ordRes.json(), regRes.json()]);
+      const [ords, registrations, prof] = await Promise.all([ordRes.json(), regRes.json(), profRes.json()]);
       setOrders(Array.isArray(ords) ? ords : []);
       setRegs(Array.isArray(registrations) ? registrations.filter((r: RegWithEvent) => r.events) : []);
+      setProfile(prof ?? {});
       setLoading(false);
     })();
   }, []);
 
   const upcomingRegs = regs.filter((r) => r.events?.status === "upcoming");
   const pastRegs     = regs.filter((r) => r.events?.status === "past");
+
+  async function handleCancelRegistration(regId: string) {
+    if (!confirm("Cancel this registration?")) return;
+    const res = await fetch(`/api/user/registrations/${regId}`, { method: "DELETE" });
+    if (res.ok) {
+      setRegs((prev) => prev.filter((r) => r.id !== regId));
+      setSelectedReg((prev) => (prev?.id === regId ? null : prev));
+    }
+  }
 
   const filteredRegs =
     eventFilter === "Upcoming" ? upcomingRegs :
@@ -95,8 +107,8 @@ export default function DashboardPage() {
               <div className="px-5 py-5 flex flex-col gap-4">
                 {[
                   { icon: Mail,   label: "Email",   value: session?.user?.email ?? "—" },
-                  { icon: Phone,  label: "Phone",   value: "—" },
-                  { icon: MapPin, label: "Address", value: "—" },
+                  { icon: Phone,  label: "Phone",   value: profile.phone    ?? "—" },
+                  { icon: MapPin, label: "Address", value: profile.address  ?? "—" },
                 ].map(({ icon: Icon, label, value }) => (
                   <div key={label} className="flex items-start gap-3">
                     <div className="w-7 h-7 rounded-full bg-orange-50 flex items-center justify-center shrink-0 mt-0.5">
@@ -318,7 +330,11 @@ export default function DashboardPage() {
                               <Eye className="w-3.5 h-3.5" />
                               View Details
                             </button>
-                            <button className="w-8 h-8 rounded-full border border-red-200 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0" aria-label="Cancel registration">
+                            <button
+                              onClick={() => handleCancelRegistration(reg.id)}
+                              className="w-8 h-8 rounded-full border border-red-200 flex items-center justify-center text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors shrink-0"
+                              aria-label="Cancel registration"
+                            >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -440,7 +456,10 @@ export default function DashboardPage() {
                 >
                   Close
                 </button>
-                <button className="flex-1 h-10 rounded-full bg-red-600 text-white text-[14px] font-medium hover:opacity-90 transition-opacity">
+                <button
+                  onClick={() => handleCancelRegistration(selectedReg.id)}
+                  className="flex-1 h-10 rounded-full bg-red-600 text-white text-[14px] font-medium hover:opacity-90 transition-opacity"
+                >
                   Cancel Registration
                 </button>
               </div>

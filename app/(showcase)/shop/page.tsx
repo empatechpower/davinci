@@ -160,9 +160,11 @@ export default function ShopPage() {
                             {artwork.title[0]}
                           </div>
                         )}
-                        <span className="absolute top-2 right-2 bg-dv-accent text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
-                          {artwork.dimensions ?? "Art"}
-                        </span>
+                        {artwork.category && (
+                          <span className="absolute top-2 right-2 bg-dv-accent text-white text-[10px] font-medium px-2 py-0.5 rounded-full">
+                            {artwork.category}
+                          </span>
+                        )}
                       </div>
                       <div className="p-3 flex flex-col gap-1 flex-1">
                         <p className="text-[13px] font-semibold text-dv-text leading-snug line-clamp-1 group-hover:text-dv-accent transition-colors">
@@ -173,7 +175,7 @@ export default function ShopPage() {
                         </p>
                         <div className="flex items-center justify-between mt-2 gap-1">
                           <p className="text-[13px] font-semibold text-dv-accent">
-                            {artwork.price != null ? `$${artwork.price}` : "—"}
+                            {artwork.price != null ? `$${Number(artwork.price).toFixed(2)}` : "—"}
                           </p>
                           <span className="flex items-center gap-1 bg-dv-accent text-white text-[11px] font-medium px-2.5 py-1 rounded-full shrink-0">
                             <ShoppingCart className="w-3 h-3" />

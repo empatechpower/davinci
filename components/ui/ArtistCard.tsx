@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { UserRound, ImageIcon } from "lucide-react";
+import { ShoppingBag, ImageIcon } from "lucide-react";
 
 interface ArtistCardProps {
   id: string;
@@ -62,7 +62,7 @@ export default function ArtistCard({
       <div className="flex items-start gap-8 mt-1">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-1.5">
-            <UserRound className="w-4 h-4 text-dv-accent" />
+            <ShoppingBag className="w-4 h-4 text-dv-accent" />
             <span className="text-[15px] font-semibold text-dv-text">{soldCount}</span>
           </div>
           <span className="text-[12px] text-dv-muted ml-[22px]">sold</span>
